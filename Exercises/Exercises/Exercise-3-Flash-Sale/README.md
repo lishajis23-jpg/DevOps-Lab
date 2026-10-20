@@ -1,126 +1,212 @@
-# Exercise 3: Scaling Flask App on a Single Node Using ReplicaSets
+# Exercise 3: Scaling a Flask App on a Single Node Using ReplicaSets
 
 ## Real-Life Use Case: E-commerce Flash Sale
 
-During an e-commerce flash sale, traffic can increase suddenly. Kubernetes ReplicaSets help maintain the desired number of application Pods by creating additional Pods when scaling up and replacing deleted Pods.
+During an e-commerce flash sale, website traffic can increase suddenly. Kubernetes ReplicaSets help maintain the desired number of application Pods by creating additional Pods when scaling up and replacing deleted Pods automatically.
 
 ## Objective
-- Understand Kubernetes Pods and ReplicaSets.
-- Deploy a Flask application.
-- Scale from 3 replicas to 5 replicas.
+
+- Understand how Kubernetes Pods and ReplicaSets work.
+- Deploy a Flask flash-sale application using Docker.
+- Run the application on a single-node Minikube cluster.
+- Scale the application from 3 to 5 replicas.
 - Observe Pod distribution across a single node.
-- Verify automatic Pod replacement.
+- Verify automatic Pod replacement when a Pod is deleted.
 
-## Technologies Used
-- Python and Flask
-- Docker
-- Kubernetes
-- Minikube
-- kubectl
-- GitHub
+## Environment
 
-## Application Endpoints
-- `/` — Displays a welcome message and the serving Pod name.
-- `/buy?user=123` — Simulates a purchase and identifies the serving Pod.
-- `/health` — Returns the application's health status.
+- Operating System: macOS
+- Architecture: Apple Silicon (ARM64)
+- Container Runtime: Docker Desktop
+- Application: Python and Flask
+- Containerization: Docker
+- Kubernetes: Minikube (single node)
+- Kubernetes CLI: kubectl
+- Repository: GitHub
 
-## Implementation Steps
-1. Created the Flask application in `app.py`.
-2. Created a Dockerfile to package the application.
-3. Started a single-node Minikube cluster.
-4. Built the `flashsale:1.0` Docker image.
-5. Created a ReplicaSet and Service configuration.
-6. Applied the configuration using `kubectl apply`.
-7. Verified the initial three Pods.
-8. Scaled the ReplicaSet to five replicas.
-9. Verified Pod distribution using `kubectl get pods -o wide`.
-10. Deleted one Pod and verified automatic replacement.
+## Project Structure
 
-## Important Commands
+```text
+Exercise3/
+├── Screenshots/
+│   ├── 01-replicaset-initial-3-pods.png
+│   ├── 02-scaled-to-5-replicas.png
+│   └── 03-pod-self-healing.png
+├── Dockerfile
+├── README.md
+├── app.py
+└── flashsale-replicaset.yaml
+```
 
-Start Minikube:
+## 1. Create the Flash Sale Application
+
+**File:** `app.py`
+
+The Flask application simulates a flash-sale checkout service using three routes:
+
+- `/` — Displays a welcome message and the hostname of the Pod serving the request.
+- `/buy` — Simulates a checkout and returns a randomly selected item along with the serving Pod's hostname.
+- `/health` — Provides a health-check endpoint for Kubernetes readiness and liveness probes.
+
+Displaying the hostname helps identify which Pod handles each request.
+
+## 2. Create the Dockerfile
+
+**File:** `Dockerfile`
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY app.py .
+
+RUN pip install --no-cache-dir flask gunicorn
+
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app", "--workers", "1", "--threads", "2"]
+```
+
+The Dockerfile uses Python 3.11, installs Flask and Gunicorn, copies the application into the container, and starts the application on port 5000.
+
+## 3. Start a Single-Node Minikube Cluster
+
+Run the following commands in the terminal:
+
 ```bash
+minikube stop
+minikube delete
 minikube start --nodes=1
+kubectl get nodes
 ```
 
-Build the image:
+Verify that the Minikube node is in the `Ready` state before continuing.
+
+## 4. Build the Docker Image
+
+Build the image using Minikube's Docker environment so that Kubernetes can use the locally built image.
+
 ```bash
-minikube image build -t flashsale:1.0 .
+eval $(minikube docker-env)
+docker build -t flashsale:1.0 .
 ```
 
-Apply the configuration:
+The image is built locally and does not need to be pushed to Docker Hub for this exercise.
+
+## 5. Create the ReplicaSet and Service
+
+**File:** `flashsale-replicaset.yaml`
+
+The Kubernetes configuration defines a ReplicaSet with an initial desired replica count of 3.
+
+It also configures:
+
+- Pod labels and selectors.
+- The locally built Docker image.
+- Container port 5000.
+- Readiness and liveness probes using `/health`.
+- Container resource requests and limits.
+- A ClusterIP Service named `flashsale-svc` to expose the Pods internally on port 80.
+
+The Service forwards traffic to the application containers on port 5000.
+
+## 6. Apply the Configuration
+
+Run:
+
 ```bash
 kubectl apply -f flashsale-replicaset.yaml
 ```
 
-Check Pods and ReplicaSets:
+Verify the resources:
+
 ```bash
 kubectl get pods
 kubectl get rs
-kubectl get pods -o wide
+kubectl get svc flashsale-svc
 ```
 
-Scale to five replicas:
+**Observation:** The ReplicaSet should maintain 3 desired Pods. Once all Pods are ready, the expected ReplicaSet status is `3 DESIRED / 3 CURRENT / 3 READY`.
+
+**Screenshot:** `Screenshots/01-replicaset-initial-3-pods.png`
+
+## 7. Access and Test the Application
+
+Start a local tunnel to the Service:
+
+```bash
+kubectl port-forward svc/flashsale-svc 8080:80
+```
+
+Keep this terminal running. Open another terminal or use your browser to test:
+
+```bash
+curl http://127.0.0.1:8080/
+curl http://127.0.0.1:8080/buy
+curl http://127.0.0.1:8080/health
+```
+
+The responses should confirm that the application is reachable. The `/` and `/buy` routes help demonstrate which Pod handles a request.
+
+## 8. Scale the ReplicaSet to 5 Replicas
+
+Run:
+
 ```bash
 kubectl scale rs flashsale-rs --replicas=5
+kubectl get rs
+kubectl get pods
 ```
 
-Delete a Pod:
+**Observation:** Kubernetes creates 2 additional Pods to reach the desired replica count of 5.
+
+The ReplicaSet should report `5 DESIRED / 5 CURRENT / 5 READY` after all Pods become ready.
+
+**Screenshot:** `Screenshots/02-scaled-to-5-replicas.png`
+
+## 9. Delete a Pod and Observe Self-Healing
+
+First, list the Pods and identify one belonging to the ReplicaSet:
+
 ```bash
-kubectl delete pod <actual-pod-name>
+kubectl get pods
 ```
 
-Access the Service:
+Delete one Pod using its actual name:
+
 ```bash
-minikube service flashsale-svc --url
+kubectl delete pod <pod-name>
 ```
 
-## Observations and Results
-- Initially, three replicas were configured.
-- Scaling to five replicas caused Kubernetes to create two additional Pods.
-- All five Pods ran on the single Minikube node.
-- Deleting a Pod caused the ReplicaSet to create a replacement.
-- The Service provided a stable endpoint for accessing the application.
+Then verify the result:
 
-## Questions and Answers
+```bash
+kubectl get pods -o wide
+kubectl get rs
+```
 
-**1. What was the initial number of replicas?**
+Replace `<pod-name>` with the real name of one of your running Pods.
 
-Three replicas.
+**Observation:** The ReplicaSet controller detects that a Pod has been deleted and creates a replacement. After the replacement becomes ready, the desired replica count returns to 5.
 
-**2. How many Pods were running initially?**
+The replacement Pod may have a different name from the deleted Pod.
 
-Three Pods, once all became ready.
+**Screenshot:** `Screenshots/03-pod-self-healing.png`
 
-**3. What happened when scaling to five replicas?**
+## Key Observations
 
-Kubernetes created two additional Pods.
+- **Replica management:** The ReplicaSet maintains the specified number of Pods.
+- **Scaling:** The number of Pods increases from 3 to 5 when the desired replica count is updated.
+- **Self-healing:** Deleting a Pod causes Kubernetes to create a replacement automatically.
+- **Single-node deployment:** All Pods are scheduled on the same Minikube node.
+- **Service discovery:** The ClusterIP Service provides a stable endpoint for accessing the application.
+- **Health checks:** Readiness and liveness probes use the `/health` endpoint.
 
-**4. What happened when one Pod was deleted?**
+## Result
 
-The ReplicaSet created a replacement Pod to maintain five replicas.
+Successfully deployed a Flask flash-sale application on a single-node Minikube cluster using Docker and Kubernetes. Scaled the ReplicaSet from 3 to 5 Pods and verified automatic Pod replacement after deletion.
 
-**5. How does Kubernetes maintain the desired number of replicas?**
-
-It compares the actual number of matching Pods with the desired number and creates or removes Pods as needed.
-
-**6. How many nodes were running?**
-
-One Minikube node.
-
-**7. Where were the five Pods running?**
-
-All five Pods were scheduled on the single Minikube node.
+This exercise demonstrates how Kubernetes ReplicaSets help maintain the desired application state and support scaling and resilience.
 
 ## Conclusion
 
-This exercise demonstrated how Kubernetes ReplicaSets manage the desired number of Pods, support scaling, and replace deleted Pods automatically. The Kubernetes Service provided a stable endpoint for accessing the Flask application.
-
-## Evidence
-Add screenshots of your actual command outputs showing:
-1. `kubectl get nodes`
-2. Three initial Pods.
-3. Five running Pods.
-4. All five Pods on one node.
-5. Automatic Pod replacement.
-6. Successful application endpoint responses.
+Kubernetes ReplicaSets make it easier to manage application replicas, scale workloads, and recover from individual Pod failures. A Service provides a stable endpoint for accessing the application, while health probes help Kubernetes monitor application availability.
