@@ -121,36 +121,6 @@ kubectl describe svc flashsale-svc
 - Deleting one Pod caused the ReplicaSet to create a replacement.
 - The Service provided a stable endpoint for accessing the application.
 
-## Questions and Answers
-
-**1. What was the initial number of replicas?**
-
-Three replicas.
-
-**2. How many Pods ran initially?**
-
-Three Pods, once all became ready.
-
-**3. What happened when scaling to five replicas?**
-
-Kubernetes created two additional Pods.
-
-**4. What happened when one Pod was deleted?**
-
-The ReplicaSet created a replacement Pod.
-
-**5. How does Kubernetes maintain the desired number of replicas?**
-
-It compares the actual number of matching Pods with the desired number and creates or removes Pods as needed.
-
-**6. How many nodes were running?**
-
-One Minikube node.
-
-**7. Where were the five Pods running?**
-
-All five Pods were scheduled on the single Minikube node.
-
 ## Conclusion
 
 This exercise demonstrated how Kubernetes ReplicaSets maintain the desired number of Pods, support scaling, and replace deleted Pods automatically. The Service provided a stable endpoint for accessing the Flask application.
