@@ -43,12 +43,19 @@ kubectl expose pod nginx --type=NodePort --port=80
 ```bash
 kubectl get services
 ```
+Result: The `nginx` service was created with type `NodePort` and port mapping `80:30099/TCP`.
 
 ### 7. Access Nginx
 ```bash
-minikube service nginx
+minikube service nginx --url
 ```
-Result: The browser displayed the **Welcome to nginx!** page.
+Result: Minikube provided a local URL, which was opened in the browser. The browser displayed the **Welcome to nginx!** page successfully.
+
+### 8. Verify the Pod Details
+```bash
+kubectl get pods -o wide
+```
+Result: The `nginx` Pod was running on the `minikube` node with IP address `10.244.0.3`.
 
 ## Conclusion
-Successfully created a local Kubernetes cluster, deployed an Nginx Pod, exposed it through a NodePort Service, and verified that the application was accessible in a browser.
+Successfully created a local Kubernetes cluster using Minikube, deployed an Nginx Pod, exposed it through a NodePort Service, and verified that the application was accessible in a browser.
