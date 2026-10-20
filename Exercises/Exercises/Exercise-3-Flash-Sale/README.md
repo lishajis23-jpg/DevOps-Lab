@@ -163,7 +163,9 @@ kubectl get pods
 
 The ReplicaSet should report `5 DESIRED / 5 CURRENT / 5 READY` after all Pods become ready.
 
-**Screenshot:** `Screenshots/02-scaled-to-5-replicas.png`
+**Screenshot: Scaled to 5 Replicas**
+
+![Five running Pods](02-scaled-to-5-replicas.png)
 
 ## 9. Delete a Pod and Observe Self-Healing
 
@@ -192,7 +194,9 @@ Replace `<pod-name>` with the real name of one of your running Pods.
 
 The replacement Pod may have a different name from the deleted Pod.
 
-**Screenshot:** `Screenshots/03-pod-self-healing.png`
+**Screenshot: Automatic Pod Replacement**
+
+![Pod self-healing](03-pod-self-healing.png)
 
 ## Key Observations
 
