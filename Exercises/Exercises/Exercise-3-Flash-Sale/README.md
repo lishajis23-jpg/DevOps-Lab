@@ -127,7 +127,9 @@ kubectl get svc flashsale-svc
 
 **Observation:** The ReplicaSet should maintain 3 desired Pods. Once all Pods are ready, the expected ReplicaSet status is `3 DESIRED / 3 CURRENT / 3 READY`.
 
-**Screenshot:** `Screenshots/01-replicaset-initial-3-pods.png`
+**Screenshot: Automatic Pod Replacement**
+
+![Automatic Pod Replacement](pod-replacement.jpg)
 
 ## 7. Access and Test the Application
 
@@ -210,7 +212,3 @@ This exercise demonstrates how Kubernetes ReplicaSets help maintain the desired 
 ## Conclusion
 
 Kubernetes ReplicaSets make it easier to manage application replicas, scale workloads, and recover from individual Pod failures. A Service provides a stable endpoint for accessing the application, while health probes help Kubernetes monitor application availability.
-
-### Automatic Pod Replacement
-
-![Automatic Pod Replacement](pod-replacement.jpg)
