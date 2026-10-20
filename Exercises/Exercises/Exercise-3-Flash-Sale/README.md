@@ -210,3 +210,7 @@ This exercise demonstrates how Kubernetes ReplicaSets help maintain the desired 
 ## Conclusion
 
 Kubernetes ReplicaSets make it easier to manage application replicas, scale workloads, and recover from individual Pod failures. A Service provides a stable endpoint for accessing the application, while health probes help Kubernetes monitor application availability.
+
+### Automatic Pod Replacement
+
+![Automatic Pod Replacement](pod-replacement.jpg)
